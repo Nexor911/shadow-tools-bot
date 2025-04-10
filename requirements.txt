@@ -1,1 +1,4 @@
 pytelegrambotapi
+telebot
+requests
+logging
