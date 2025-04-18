@@ -5,7 +5,7 @@ from PIL import Image
 from PIL.ExifTags import TAGS
 import os
 
-bot = telebot.TeleBot('Token') #вставь токен из тг
+bot = telebot.TeleBot('Token-Bot') #вставь токен из тг
 
 # Флаг ожидания фото
 user_waiting_photo = {}
