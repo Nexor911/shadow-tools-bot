@@ -109,4 +109,3 @@ def log_all(message):
     logging.info(f'Пользователь {message.from_user.id} написал сообщение: {message.text}')
 
 bot.polling(none_stop=True, interval=0)
-
