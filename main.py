@@ -4,10 +4,13 @@ import logging
 from PIL import Image
 from PIL.ExifTags import TAGS
 import os
+import nmap
+import socket
 
-bot = telebot.TeleBot('Token-Bot') #вставь токен
+bot = telebot.TeleBot('bot-token') #вставь токен
 
-# Флаг ожидания фото
+NM = nmap.PortScanner()
+
 user_waiting_photo = {}
 
 # Настройка логов
@@ -26,7 +29,7 @@ def start_command(message):
 @bot.message_handler(commands=['help'])
 def help_command(message):
     logging.info(f'Пользователь {message.from_user.id} написал /help')
-    bot.send_message(message.chat.id, "Доступные команды:\n/tools\n/ip [ip адрес]\n/metadata")
+    bot.send_message(message.chat.id, "Доступные команды:\n/tools\n/ip [ip адрес]\n/metadata\n/nmap [ip or domen name]")
 
 @bot.message_handler(commands=['tools'])
 def tools_command(message):
@@ -42,6 +45,44 @@ def ip_command(message):
         bot.send_message(message.chat.id, result)
     except:
         bot.send_message(message.chat.id, "Использование: /ip [ip адрес]")
+
+@bot.message_handler(commands=['nmap'])
+def nmap_command(message):
+    try:
+        target = message.text.split()[1]
+        result = nmap_scan(target)
+        logging.info(f'Пользователь {message.from_user.id} сделал Nmap сканирование: {target}')
+
+        if len(result) > 4000:
+            filename = f'nmap_{target}.txt'
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(result)
+            with open(filename, 'rb') as f:
+                bot.send_document(message.chat.id, f)
+            os.remove(filename)
+        else:
+            bot.send_message(message.chat.id, result)
+    except IndexError:
+        bot.send_message(message.chat.id, "Использование: /nmap [ip or domen]")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Ошибка: {e}")
+
+
+def nmap_scan(target):
+    try:
+        ip = socket.gethostbyname(target)
+        NM.scan(target, arguments='-p 1-10000')
+        text = ''
+        for host in NM.all_hosts():
+            text += f"Хост: {host}\nСтатус: {NM[host].state()}\n"
+            for proto in NM[host].all_protocols():
+                for port in sorted(NM[host][proto].keys()):
+                    state = NM[host][proto][port]['state']
+                    text += f"{proto.upper()} {port}: {state}\n"
+        return text or "Нет открытых портов"
+    except Exception as e:
+        print(f"Ошибка: {e}")
+
 
 def ip_lookup(ip):
     url = f"http://ip-api.com/json/{ip}"
@@ -109,3 +150,4 @@ def log_all(message):
     logging.info(f'Пользователь {message.from_user.id} написал сообщение: {message.text}')
 
 bot.polling(none_stop=True, interval=0)
+
