@@ -1,4 +1,5 @@
-pytelegrambotapi
-telebot
+pyTelegramBotAPI
 requests
+Pillow
+python-nmap
 logging
