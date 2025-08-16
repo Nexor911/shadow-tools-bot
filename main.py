@@ -49,9 +49,11 @@ def ip_command(message):
 @bot.message_handler(commands=['nmap'])
 def nmap_command(message):
     try:
-        target = message.text.split()[1]
-        result = nmap_scan(target)
-        logging.info(f'Пользователь {message.from_user.id} сделал Nmap сканирование: {target}')
+        parts = message.text.split()
+        target = parts[1]
+        extra_args = ' '.join(parts[2:]) if len(parts) > 2 else ''
+        result = nmap_scan(target, extra_args)
+        logging.info(f'Пользователь {message.from_user.id} сделал Nmap сканирование: {target} {extra_args}')
 
         if len(result) > 4000:
             filename = f'nmap_{target}.txt'
@@ -63,15 +65,14 @@ def nmap_command(message):
         else:
             bot.send_message(message.chat.id, result)
     except IndexError:
-        bot.send_message(message.chat.id, "Использование: /nmap [ip or domen]")
+        bot.send_message(message.chat.id, "Использование: /nmap [ip or domen] [флаг/и]")
     except Exception as e:
         bot.send_message(message.chat.id, f"Ошибка: {e}")
 
-
-def nmap_scan(target):
+def nmap_scan(target, nmap_args=''):
     try:
         ip = socket.gethostbyname(target)
-        NM.scan(target, arguments='-p 1-10000')
+        NM.scan(target, arguments=f'-p 1-10000 {nmap_args}')
         text = ''
         for host in NM.all_hosts():
             text += f"Хост: {host}\nСтатус: {NM[host].state()}\n"
@@ -79,10 +80,17 @@ def nmap_scan(target):
                 for port in sorted(NM[host][proto].keys()):
                     state = NM[host][proto][port]['state']
                     text += f"{proto.upper()} {port}: {state}\n"
+                    if 'name' in NM[host][proto][port]:
+                        name = NM[host][proto][port]['name']
+                        product = NM[host][proto][port].get('product', '')
+                        version = NM[host][proto][port].get('version', '')
+                        extrainfo = NM[host][proto][port].get('extrainfo', '')
+                        info = " ".join([product, version, extrainfo]).strip()
+                        if info:
+                            text += f"   ➤ {name}: {info}\n"
         return text or "Нет открытых портов"
     except Exception as e:
-        print(f"Ошибка: {e}")
-
+        return f"Ошибка: {e}"
 
 def ip_lookup(ip):
     url = f"http://ip-api.com/json/{ip}"
@@ -127,7 +135,7 @@ def handle_photo(message):
             bot.send_message(message.chat.id, "EXIF-метаданные отсутствуют.")
     except Exception as e:
         bot.send_message(message.chat.id, f"Ошибка при обработке изображения: {e}")
-
+        
 def extract_exif(image_path):
     try:
         image = Image.open(image_path)
