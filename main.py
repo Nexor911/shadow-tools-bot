@@ -6,8 +6,9 @@ from PIL.ExifTags import TAGS
 import os
 import nmap
 import socket
+from xss_scanner import Xsscanner, start_scan
 
-bot = telebot.TeleBot('bot-token') #вставь токен
+bot = telebot.TeleBot('token') #вставь токен
 
 NM = nmap.PortScanner()
 
@@ -106,6 +107,29 @@ IP: {response['query']}
 Координаты: {response['lat']}, {response['lon']}
 """
     return result
+
+@bot.message_handler(commands=['xss'])
+def xss_command(message):
+    flag = message.text.split()
+    if len(flag) < 2:
+        bot.reply_to(message, "Использование: /xss [url]")
+        return
+
+    xss_url = flag[1]
+    bot.reply_to(message, f"XSS сканер запущен для: {xss_url}")
+
+    try:
+        
+        scanner = Xsscanner(xss_url)
+        result = start_scan(scanner)
+
+        if not result:
+            bot.send_message(message.chat.id, "Уязвимостей не найдено")
+        else:
+            result_text = "\n".join(result)
+            bot.send_message(message.chat.id, f"Найдены Xss:\n{result_text}")
+    except Exception as e:
+        bot.send_message(message.chat.id, f"Ошибка: {str(e)}")
 
 @bot.message_handler(commands=['metadata'])
 def metadata_command(message):
